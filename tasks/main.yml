@@ -1,0 +1,161 @@
+---
+# tasks file for shibboleth3_idp
+#
+- name: Ensure ldap tools installed
+  apt: name=ldap-utils state=present
+  when: ansible_distribution == "Ubuntu"
+  become: yes
+
+- name: Ensure acl package installed
+  apt: name=acl state=present
+  when: ansible_distribution == "Ubuntu"
+  become: yes
+
+- name: Test AD Authentication
+  command: ldapwhoami -h '{{ shib3_idp_ad_host }}' -x -D '{{ shib3_idp_ad_user }}@{{ shib3_idp_ad_realm }}' -w '{{ shib3_idp_ad_pass }}'
+  changed_when: no
+  register: ldap_result
+  failed_when: ldap_result.rc != 0
+  tags:
+    - test_ad
+
+  #Todo: : Check for Shibboleth3 Install
+
+- name: Ensure Shib3 tmp dir exists
+  file: path={{ shib3_tmp_dir }} state=directory owner={{ jetty_user_login }} group={{ jetty_group_name }} recurse=yes
+  become: yes
+
+- name: Ensure Shib3 idp dir exists
+  file: path={{ shib3_idp_dir }} state=directory owner={{ jetty_user_login }} group={{ jetty_group_name }} recurse=yes
+  become: yes
+
+- name: Download Shibboleth3 files
+  get_url: url={{ shib3_idp_url }} dest={{ shib3_tmp_dir }}/shib3_idp.tgz
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Download Shibboleth3 shasum
+  get_url: url={{ shib3_idp_shasum }} dest={{ shib3_tmp_dir}}/shib3_idp.sha1sum
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Download Shibboleth3 asc
+  get_url: url={{ shib3_idp_gpg }} dest={{ shib3_tmp_dir }}/shib3_idp.asc
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+ # ToDo: Verify Shibboleth3 GPG signature
+
+ #- name: Unpack Shib IDP files
+ # unarchive: src={{ shib3_tmp_dir }}/shib3_idp.tgz dest={{ shib3_tmp_dir }} copy=no
+ # become_user: "{{ jetty_user_login }}"
+ # become: yes
+
+- name: Create empty idp.install.properties
+  file: path={{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}/idp.install.properties  state=touch
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Use idp.merge.properties for install process
+  template:
+    src=idp.properties.j2
+    dest={{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}/idp.merge.properties
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Install Shibboleth3 IDP
+  shell: "./bin/install.sh \
+          -Didp.noprompt=true \
+          -Didp.host.name={{ shib3_idp_hostname }} \
+          -Didp.scope={{ shib3_idp_ad_realm }} \
+          -Didp.src.dir={{ shib3_idp_dist_dir }} \
+          -Didp.target.dir={{ shib3_idp_dir }} \
+          -Didp.property.file=idp.install.properties \
+          -Didp.merge.properties=idp.merge.properties \
+          -Didp.sealer.password={{ shib3_idp_sealer_password }} \
+          -Didp.keystore.password={{ shib3_idp_keystore_password }}"
+  args:
+    chdir: "{{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}"
+    creates: "/opt/shibboleth-idp/system/conf/global-system.xml"
+  register: shib3_install
+  failed_when: shib3_install.rc != 0
+  environment:
+    JAVA_HOME: "{{ oraclejdk_java_home }}"
+  notify:
+    - restart jetty
+  become_user: "{{ jetty_user_login }}"
+  become: yes 
+
+- name: Setup Shibboleth templates
+  template: src={{ item }}.j2 dest={{ shib3_idp_dir }}/conf/{{ item }}
+  with_items:
+    - attribute-filter.xml
+    - attribute-resolver.xml
+    - ldap-authn-config.xml
+    - ldap.properties
+    - idp.properties
+    - metadata-providers.xml
+  notify:
+    - restart jetty
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Setup Shibboleth authn directory templates
+  template: src={{ item }}.j2 dest={{ shib3_idp_dir }}/conf/authn/{{ item }}
+  with_items:
+    - ldap-authn-config.xml
+  notify:
+    - restart jetty
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Create Shibboleth idp-browser.p12 file for jetty
+  command: openssl pkcs12 -export -out idp-browser.p12 -inkey idp-encryption.key -in idp-encryption.crt -passout pass:{{ shib3_idp_browser_password }} 
+  args:
+    chdir: "{{ shib3_idp_dir }}/credentials/"
+    creates: "{{ shib3_idp_dir }}/credentials/idp-browser.p12"
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Include jetty setup yml
+  include: tasks/jetty.yml
+
+
+## Web Proxy
+#
+- name: Include certbot playbook if enabled
+  include: tasks/certbot.yml
+  when: shib3_idp_nginx_certbot == true and shib3_idp_nginx_proxy == true
+  become: yes
+  tags:
+    - letsencrypt
+    - certbot
+
+- name: Include nginx playbook if enabled
+  include: tasks/nginx.yml
+  become: yes
+  when: shib3_idp_nginx_proxy == true
+  tags:
+    - nginx
+
+- name: Setup HTTP redirect if no nginx proxy
+  iptables: chain=PREROUTING
+            table=nat
+            protocol=tcp
+            jump=REDIRECT
+            destination_port=80
+            to_ports=8080
+            comment="Redirect port 80 to jetty 8080"
+  become: yes
+  when: shib3_idp_nginx_proxy == false
+
+- name: Setup HTTPS redirect if no nginx proxy
+  iptables: chain=PREROUTING
+            table=nat
+            protocol=tcp
+            jump=REDIRECT
+            destination_port=443
+            to_ports=8443
+            comment="Redirect port 443 to jetty 8443"
+  become: yes
+  when: shib3_idp_nginx_proxy == false

@@ -1,0 +1,19 @@
+galaxy_info:
+  author: Andrew Klaus
+  description: Role to setup Identity Provider 3
+  company: Cybera Inc.
+  license: license (BSD)
+  min_ansible_version: 1.2
+
+  platforms:
+  - name: Ubuntu
+    versions:
+    - trusty
+    - utopic
+    - vivid
+    - wily
+    - xenial
+  galaxy_tags: []
+
+dependencies:
+  - cybera.jetty

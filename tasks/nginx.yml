@@ -1,0 +1,39 @@
+- name: Setup nginx repo
+  apt_repository: repo={{ item }} state=present
+  with_items:
+    - "deb http://nginx.org/packages/ubuntu/ {{ ansible_lsb.codename }} nginx"
+    - "deb-src http://nginx.org/packages/ubuntu/ {{ ansible_lsb.codename }} nginx"
+  when: ansible_lsb.id == "Ubuntu"
+
+- name: Setup nginx key
+  apt_key: url=http://nginx.org/keys/nginx_signing.key state=present
+
+- name: Apt-get update
+  apt: update_cache=yes
+
+- name: Install nginx if needed
+  package: name=nginx state=present
+
+- name: Install openssl if needed
+  package: name=openssl state=present
+
+- name: Ensure nginx ssl directory exists
+  file: path={{ shib3_idp_nginx_ssldir }} state=directory
+
+- name: Create DHParams file if needed (** MAY TAKE A WHILE **)
+  command: openssl dhparam -out {{ shib3_idp_nginx_ssldir }}/dhparams.pem {{ shib3_idp_nginx_dhparam_bits }} creates={{ shib3_idp_nginx_ssldir }}/dhparams.pem
+  notify:
+    - reload nginx
+
+- name: Remove nginx default config
+  file: path=/etc/nginx/conf.d/default.conf state=absent
+  notify:
+    - reload nginx
+
+- name: Setup nginx template
+  template: src=nginx.conf.j2 dest=/etc/nginx/conf.d/shib3_idp.conf
+  notify:
+    - reload nginx
+
+- name: Ensure nginx service enabled
+  service: name=nginx state=started enabled=yes

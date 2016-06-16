@@ -1,0 +1,20 @@
+---
+# handlers file for shibboleth3_idp
+- name: reload nginx
+  service: name=nginx state=reloaded
+  become: yes
+
+- name: restart nginx
+  service: name=nginx state=restarted
+  become: yes
+
+- name: restart jetty
+  service: name=jetty state=restarted
+  become: yes
+
+- name: rebuild war file
+  shell: echo "{{ shib3_idp_dir }}" | bin/build.sh 
+  args:
+    chdir: "{{ shib3_idp_dir }}"
+  become_user: "{{ jetty_user_login }}"
+  become: yes

@@ -1,0 +1,28 @@
+- name: Download certbot auto
+  get_url: url=https://dl.eff.org/certbot-auto dest=/root/certbot-auto mode=0744
+
+- name: Run certbot-auto dependencies
+  command: /root/certbot-auto --os-packages-only -n -q
+  register: cb_reg
+  changed_when: cb_reg.rc != 0
+
+- name: Make sure nginx webroot certbot directory exists
+  file: path={{ shib3_idp_nginx_cb_webdir }} state=directory
+
+- name: Create certbot certs if needed
+  command: /root/certbot-auto certonly \
+          --standalone \
+          --agree-tos \
+          --email {{ shib3_idp_nginx_cb_email }} \
+          --renew-by-default \
+          --quiet \
+          -n \
+          -d {{ shib3_idp_hostname }} \
+          --webroot-path={{ shib3_idp_nginx_cb_webdir }}   creates=/etc/letsencrypt/live/{{ shib3_idp_hostname }}/cert.pem
+
+- name: Setup certbot crontab if needed
+  cron: name="Autorenew certbot"
+        minute="8" hour="0,12"
+        job="/root/certbot-auto renew --quiet --no-self-upgrade --webroot-path={{ shib3_idp_nginx_cb_webdir }} --renew-hook 'service nginx reload'"
+        cron_file=certbot
+        user="root"

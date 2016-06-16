@@ -1,0 +1,37 @@
+--module=server
+threads.min=10
+threads.max=200
+threads.timeout=60000
+jetty.output.buffer.size=32768
+jetty.request.header.size=8192
+jetty.response.header.size=8192
+jetty.send.server.version=true
+jetty.send.date.header=false
+jetty.dump.start=false
+jetty.dump.stop=false
+
+--module=deploy
+--module=websocket
+--module=ext
+--module=resources
+--module=jsp
+--module=jstl
+--module=annotations
+--module=logging
+--module=requestlog
+--module=servlets
+--module=ext
+--module=plus
+  
+--exec
+  
+-Didp.home={{ shib3_idp_dir }}
+  
+# Maximum amount of memory that Jetty may use, at least 1.5G is recommended
+# for handling larger (> 25M) metadata files but you will need to test on
+# your particular metadata configuration
+-Xmx1500m
+ 
+# Maximum amount of memory allowed for the JVM permanent generation (Java 7 only)
+-XX:MaxPermSize=128m
+

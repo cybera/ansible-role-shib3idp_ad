@@ -1,0 +1,36 @@
+---
+# defaults file for shibboleth3_idp
+#
+shib3_idp_hostname: "idp.example.ca"
+shib3_idp_ver: "3.2.1"
+shib3_idp_url: "https://shibboleth.net/downloads/identity-provider/latest/shibboleth-identity-provider-{{ shib3_idp_ver }}.tar.gz"
+shib3_idp_shasum: "{{ shib3_idp_url }}.sha1"
+shib3_idp_gpg: "{{ shib3_idp_url }}.asc"
+shib3_idp_prefix: "shibboleth-identity-provider-{{ shib3_idp_ver }}"
+
+# Directories
+shib3_idp_dir: "/opt/shibboleth-idp"
+shib3_tmp_dir: "/tmp/shib3"
+shib3_idp_dist_dir: "{{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}"
+
+## AD Setup
+shib3_idp_ad_realm: "example.ca"
+shib3_idp_ad_host: "dc.example.ca"
+shib3_idp_ad_user: "shibuser"
+shib3_idp_ad_pass: "password"
+shib3_idp_ad_basedn: "CN=Users,DC=dc,DC=example,DC=ca"
+
+shib3_idp_sealer_password: "password"
+shib3_idp_keystore_password: "password"
+shib3_idp_browser_password: "password"
+
+## Nginx Reverse Proxy Options
+shib3_idp_nginx_proxy: true
+shib3_idp_nginx_ssldir: /etc/nginx/ssl
+shib3_idp_nginx_dhparam_bits: 4096
+
+## Nginx Certbot Options
+
+shib3_idp_nginx_certbot: true
+shib3_idp_nginx_cb_webdir: /var/www/certbot
+shib3_idp_nginx_cb_email: user@example.com

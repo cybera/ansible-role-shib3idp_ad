@@ -1,0 +1,91 @@
+- name: Create Jetty start.d directory
+  file: path=/opt/jetty/start.d state=directory owner={{ jetty_user_login }} group={{ jetty_group_name }}
+  become: yes
+  tags:
+    - jetty
+
+- name: Setup jetty 9.2 configs
+  template:
+    src=jetty92/{{ item.filename }}.j2
+    dest={{ jetty_user_homedir }}/{{ item.dst }}/{{ item.filename }}
+    backup=yes
+  with_items:
+    - { filename: 'idp.xml', dst: 'webapps/'}
+    - { filename: 'jetty-https.xml', dst: 'etc/'}
+    - { filename: 'jetty-ssl.xml', dst: 'etc/'}
+    - { filename: 'start.ini',dst: ''}
+  notify:
+    - restart jetty
+  tags:
+    - jetty
+  when: jetty_version.find('9.2.') != -1
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Setup jetty 9.3 configs
+  template:
+    src=jetty93/{{ item.filename }}.j2
+    dest={{ jetty_user_homedir }}/{{ item.dst }}/{{ item.filename }}
+    backup=yes
+  with_items:
+    - { filename: 'idp.xml', dst: 'webapps/'}
+    - { filename: 'jetty-ssl-context.xml', dst: 'etc/'}
+    - { filename: 'start.ini', dst: ''}
+    - { filename: 'jetty.xml', dst: 'etc/' }
+  notify:
+    - restart jetty
+  tags:
+    - jetty
+  when: jetty_version.find('9.3.') != -1 
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+
+- name: Copy jetty default files (but don't overwrite)
+  copy:
+    remote_src=True
+    force=no
+    src={{ jetty_user_homedir }}/demo-base/{{ item.dir }}/{{ item.filename }}
+    dest={{ jetty_user_homedir }}/{{ item.dir }}/{{ item.filename }}
+  with_items:
+    - { filename: 'http.ini', dir: 'start.d'}
+    - { filename: 'https.ini', dir: 'start.d' }
+    - { filename: 'ssl.ini', dir: 'start.d' }
+  tags:
+    - jetty
+  notify:
+    - restart jetty
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+  #- name: Setup Jetty ssl.ini file
+  #  ini_file: dest=/opt/jetty/start.d/ssl.ini
+
+- name: Configure jetty 9.2 ssl.ini
+  lineinfile:
+    dest={{ jetty_user_homedir }}/start.d/ssl.ini
+    regexp={{ item.r }}
+    line={{ item.l }}
+  with_items:
+    - { r: '^\s*jetty.keystore=', l: 'jetty.keystore={{ shib3_idp_dir }}/credentials/idp-browser.p12' }
+    - { r: '^\s*jetty.keystore.type=', l: 'jetty.keystore.type=PKCS12'  }
+    - { r: '^\s*jetty.keystore.password=', l: 'jetty.keystore.password={{ shib3_idp_browser_password }}'  }
+  notify:
+    - restart jetty
+  when: jetty_version.find('9.2') != -1
+  become_user: "{{ jetty_user_login }}"
+  become: yes
+
+- name: Configure jetty 9.3 ssl.ini
+  lineinfile:
+    dest={{ jetty_user_homedir }}/start.d/ssl.ini
+    regexp={{ item.r }}
+    line={{ item.l }}
+  with_items:
+    - { r: '^\s*jetty.sslContext.keyStorePath=', l: 'jetty.sslContext.keyStorePath={{ shib3_idp_dir }}/credentials/idp-browser.p12' }
+    - { r: '^\s*jetty.sslContext.keyStoreType=', l: 'jetty.sslContext.keyStoreType=PKCS12'  }
+    - { r: '^\s*jetty.sslContext.keyStorePassword=', l: 'jetty.sslContext.keyStorePassword={{ shib3_idp_browser_password }}'  }
+  notify:
+    - restart jetty
+  when: jetty_version.find('9.3') != -1
+  become_user: "{{ jetty_user_login }}"
+  become: yes
