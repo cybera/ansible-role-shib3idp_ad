@@ -46,10 +46,10 @@
 
  # ToDo: Verify Shibboleth3 GPG signature
 
- #- name: Unpack Shib IDP files
- # unarchive: src={{ shib3_tmp_dir }}/shib3_idp.tgz dest={{ shib3_tmp_dir }} copy=no
- # become_user: "{{ jetty_user_login }}"
- # become: yes
+- name: Unpack Shib IDP files
+ unarchive: src={{ shib3_tmp_dir }}/shib3_idp.tgz dest={{ shib3_tmp_dir }} copy=no
+ become_user: "{{ jetty_user_login }}"
+ become: yes
 
 - name: Create empty idp.install.properties
   file: path={{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}/idp.install.properties  state=touch
@@ -84,7 +84,7 @@
   notify:
     - restart jetty
   become_user: "{{ jetty_user_login }}"
-  become: yes 
+  become: yes
 
 - name: Setup Shibboleth templates
   template: src={{ item }}.j2 dest={{ shib3_idp_dir }}/conf/{{ item }}
@@ -110,7 +110,7 @@
   become: yes
 
 - name: Create Shibboleth idp-browser.p12 file for jetty
-  command: openssl pkcs12 -export -out idp-browser.p12 -inkey idp-encryption.key -in idp-encryption.crt -passout pass:{{ shib3_idp_browser_password }} 
+  command: openssl pkcs12 -export -out idp-browser.p12 -inkey idp-encryption.key -in idp-encryption.crt -passout pass:{{ shib3_idp_browser_password }}
   args:
     chdir: "{{ shib3_idp_dir }}/credentials/"
     creates: "{{ shib3_idp_dir }}/credentials/idp-browser.p12"
