@@ -47,9 +47,9 @@
  # ToDo: Verify Shibboleth3 GPG signature
 
 - name: Unpack Shib IDP files
- unarchive: src={{ shib3_tmp_dir }}/shib3_idp.tgz dest={{ shib3_tmp_dir }} copy=no
- become_user: "{{ jetty_user_login }}"
- become: yes
+  unarchive: src={{ shib3_tmp_dir }}/shib3_idp.tgz dest={{ shib3_tmp_dir }} copy=no
+  become_user: "{{ jetty_user_login }}"
+  become: yes
 
 - name: Create empty idp.install.properties
   file: path={{ shib3_tmp_dir }}/{{ shib3_idp_prefix }}/idp.install.properties  state=touch
