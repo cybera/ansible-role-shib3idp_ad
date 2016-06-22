@@ -7,6 +7,7 @@ shib3_idp_url: "https://shibboleth.net/downloads/identity-provider/latest/shibbo
 shib3_idp_shasum: "{{ shib3_idp_url }}.sha1"
 shib3_idp_gpg: "{{ shib3_idp_url }}.asc"
 shib3_idp_prefix: "shibboleth-identity-provider-{{ shib3_idp_ver }}"
+shib3_idp_metadata_provider: https://openconext.example.com/authentication/idp/metadata'
 
 # Directories
 shib3_idp_dir: "/opt/shibboleth-idp"
@@ -32,5 +33,6 @@ shib3_idp_nginx_dhparam_bits: 4096
 ## Nginx Certbot Options
 
 shib3_idp_nginx_certbot: true
+shib3_idp_nginx_cb_testcrt: false
 shib3_idp_nginx_cb_webdir: /var/www/certbot
 shib3_idp_nginx_cb_email: user@example.com

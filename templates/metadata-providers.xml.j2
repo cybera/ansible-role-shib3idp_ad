@@ -13,7 +13,7 @@
     <MetadataProvider id="HTTPMetadata"
                       xsi:type="FileBackedHTTPMetadataProvider"
                       backingFile="%{idp.home}/metadata/metadata-openconext.xml"
-                      metadataURL="https://engine.openconext.dev.cybera.ca/authentication/sp/metadata"
+                      metadataURL="{{ shib3_idp_metadata_provider }}" 
                       disregardTLSCertificate="true" >
 
         <MetadataFilter xsi:type="RequiredValidUntil" maxValidityInterval="172800"/>

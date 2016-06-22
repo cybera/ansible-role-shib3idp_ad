@@ -6,7 +6,7 @@
 
     <!-- Release some attributes to an SP. -->
     <AttributeFilterPolicy id="example1">
-        <PolicyRequirementRule xsi:type="Requester" value="https://engine.openconext.dev.cybera.ca/authentication/sp/metadata" />
+        <PolicyRequirementRule xsi:type="Requester" value="{{ shib3_idp_metadata_provider }}" />
 
         <AttributeRule attributeID="eduPersonPrincipalName">
             <PermitValueRule xsi:type="ANY" />
